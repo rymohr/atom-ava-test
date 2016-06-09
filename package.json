@@ -1,0 +1,13 @@
+{
+  "name": "atom-ava-test",
+  "main": "./lib/atom-ava-test",
+  "version": "0.0.1",
+  "description": "Automatically open and run tests for current file in atom with ava",
+  "keywords": ["atom", "ava", "test"],
+  "repository": "https://github.com/rymohr/atom-ava-test",
+  "license": "MIT",
+  "engines": {
+    "atom": ">=1.0.0 <2.0.0"
+  },
+  "dependencies": {}
+}
