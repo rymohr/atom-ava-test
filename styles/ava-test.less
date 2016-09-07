@@ -5,10 +5,27 @@
 @import "ui-variables";
 
 .ava-test {
+  z-index: 3;
+  display: none;
   font-family: courier;
-  position: fixed;
-  bottom: 24px;
-  padding: 10px;
-  // pointer-events: none;
-  background-color: rgba(255, 255, 255, 0.5);
+  width: 100%;
+  max-height: 40vh;
+  overflow: auto;
+  background-color: rgba(255, 255, 255, 0.94);
+
+  pre {
+    padding: 10px 60px;
+    background-color: transparent;
+  }
+
+  code {
+    font-weight: bold;
+  }
+
+  &.active {
+    display: block;
+  }
+
+  &[data-exit-code='0'] code { color: #090; }
+  &[data-exit-code='1'] code { color: #c00; }
 }
