@@ -10,6 +10,7 @@
 # https://github.com/joeybaker/tap-simple
 # https://github.com/toolness/tap-prettify
 
+fs = require 'fs'
 Path = require 'path'
 {BufferedProcess} = require 'atom'
 
@@ -31,9 +32,13 @@ getDir = (path) ->
 getBasename = (path) ->
   Path.basename(path)
 
-module.exports = AvaTest =
+isExistingFile = (path) ->
+  fs.existsSync(path)
+
+module.exports = AtomAvaTest =
   panel: null
   element: null
+  process: null
 
   activate: (state) ->
     code = document.createElement('code')
@@ -41,20 +46,27 @@ module.exports = AvaTest =
     pre = document.createElement('pre')
     pre.appendChild(code)
 
-    @element = document.createElement('div')
+    @element = el = document.createElement('div')
     @element.classList.add('ava-test')
+    @element.addEventListener('click', -> el.classList.remove('active'))
     @element.appendChild(pre)
 
     atom.workspace.onDidStopChangingActivePaneItem((editor) ->
-      path = editor.getPath()
+      # won't be a TextEditor instance for find and replace, settings, etc
+      return unless editor && editor.getPath
 
-      return unless isSourceFile(path)
+      # may be a new file
+      return unless path = editor.getPath()
 
-      atom.workspace.open(getTestPath(path), {
-        split: 'right',
-        activatePane: false,
-        activateItem: true,
-      })
+      if isSourceFile(path)
+        testPath = getTestPath(path)
+
+        if isExistingFile(testPath)
+          atom.workspace.open(testPath, {
+            split: 'right',
+            activatePane: false,
+            activateItem: true,
+          })
     )
 
     atom.workspace.observeTextEditors((editor) ->
@@ -62,18 +74,31 @@ module.exports = AvaTest =
         { path } = event
 
         if isSourceFile(path) || isTestFile(path)
+          testPath = getTestPath(path)
+
+          return unless isExistingFile(testPath)
+
+          AtomAvaTest.process?.kill()
+
           output = ''
 
-          testPath = getTestPath(path)
+          append = (line) ->
+            code.innerHTML = (output += line)
+
           testDir = getDir(testPath)
           testFile = getBasename(testPath)
           command = '/usr/local/bin/ava'
-          args = ['--tap', testFile, '|', 'faucet']
+          args = ['--require', 'babel-register', '--tap', testFile, '|', 'faucet']
           options = {cwd: testDir}
-          stdout = stderr = (line) -> code.innerHTML = (output += line)
-          exit = (code) -> console.log(if code is 0 then "PASS" else "FAIL")
+          stdout = stderr = append
+          exit = (code) -> el.dataset.exitCode = code
 
-          process = new BufferedProcess({command, args, options, stdout, stderr, exit})
+          append("TEST #{testPath}\n")
+
+          el.dataset.exitCode = undefined
+          el.classList.add('active')
+
+          AtomAvaTest.process = new BufferedProcess({command, args, options, stdout, stderr, exit})
       )
     )
 
@@ -83,3 +108,4 @@ module.exports = AvaTest =
 
   deactivate: ->
     @panel.destroy()
+    @process?.kill()
